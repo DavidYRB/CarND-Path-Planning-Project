@@ -51,7 +51,9 @@ int main() {
     map_waypoints_dy.push_back(d_y);
   }
 
-  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
+  double end_path_v{0};
+
+  h.onMessage([&end_path_v, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,
                &map_waypoints_dx,&map_waypoints_dy]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                uWS::OpCode opCode) {
@@ -98,15 +100,77 @@ int main() {
            * TODO: define a path made up of (x,y) points that the car will visit
            *   sequentially every .02 seconds
            */
-          double ref_v = 49.5;
+          
+          int prev_size = previous_path_x.size();
+          double acce_abs{5}; // m/s^2
+          double v_limit{49.5};
+          double ref_v = v_limit/2.24; // convert to m/s
           double dist_c = 0.4;
-          int lane_num = 0;
+          int lane_num = 1;
           int traj_pts_num = 50;
 
+          // checking front cars in the same lane
+          double safe_dist{0};
+          double follow_dist{25};
+          // vector<double> last = getXY(end_path_s, end_path_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          // std::cout << "last x: " << last[0] << " y: " << last[1] << std::endl;
+          if(prev_size > 0){
+            car_s = end_path_s;
+          }
+          
+          // find the closest car in front
+          // TODO: improve the following temp variables to a better format
+          double closest_car_s{100000};
+          double closest_car_v{ref_v};
+          
+          for(int i = 0; i < sensor_fusion.size(); ++i){
+            float d = sensor_fusion[i][6];
+            if(d < (2+4*lane_num+2) && d > (2+4*lane_num-2)){
+              double vx = sensor_fusion[i][3];
+              double vy = sensor_fusion[i][4];
+              double check_speed = sqrt(vx*vx + vy*vy);
+              double check_car_s = sensor_fusion[i][5];
+              check_car_s += (double)prev_size*0.02*check_speed;
+              if(check_car_s > car_s && check_car_s < closest_car_s){
+                //std::cout << "new front car s: " << check_car_s << " v: " << check_speed << std::endl;
+                closest_car_s = check_car_s;
+                closest_car_v = check_speed;
+              }
+            }
+          }
+
+          // set the following response
+          // calculate safe distance
+          std::cout << "curr s: " << j[1]["s"] << " front s: " << closest_car_s << std::endl;
+          std::cout << " front s: " << closest_car_s << " car s: " << car_s <<  " front v: " << closest_car_v << " curr v: "<< end_path_v << std::endl;
+          if(closest_car_v < end_path_v){
+            safe_dist = follow_dist + pow((closest_car_v - end_path_v), 2)/(2 * acce_abs);
+            std::cout << " safe dist: " << safe_dist << std::endl;
+            if(closest_car_s - car_s <= safe_dist){
+              std::cout << "need to slow down\n";
+              ref_v = closest_car_v;
+            }
+            else{
+              std::cout << "safe at max speed\n";
+              ref_v = v_limit/2.24;
+            }
+          }
+          else{
+            std::cout << "safe at max speed\n";
+            ref_v = v_limit/2.24;
+          }
+          if(end_path_v > ref_v){
+            end_path_v -= acce_abs * 0.02;
+          }
+          else{
+            end_path_v += acce_abs * 0.02;
+          }
+          std::cout << "ref_v: " << ref_v << " end_path_v: " << end_path_v << std::endl; 
+
+          // trajectory generation
           vector<double> ptsx;
           vector<double> ptsy;
 
-          int prev_size = previous_path_x.size();
           double anchor_x = car_x;
           double anchor_y = car_y;
           double anchor_theta = deg2rad(car_yaw);
@@ -163,27 +227,42 @@ int main() {
             next_y_vals.push_back(previous_path_y[i]);
           }
           
+          // for(int i = 1; i <= traj_pts_num - prev_size; ++i){
+          //   if(end_path_v < ref_v){
+          //     end_path_v += acce_abs*0.02;
+          //   }
+          //   else if(end_path_v > ref_v){
+          //     end_path_v -= acce_abs*0.02;
+          //   }
+          //   car_s += (0.02 * end_path_v);
+          //   vector<double> temp = getXY(car_s, car_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+          //   next_x_vals.push_back(temp[0]);
+          //   next_y_vals.push_back(s(temp[0]));
+          // }
           double target_x = 30;
           double target_y = s(target_x);
           double target_dist = sqrt((target_x*target_x) + (target_y*target_y));
-          double increment_dist = target_x / (target_dist/(0.02 * ref_v / 2.24));
+
+
+          double increment_dist{0.0};
           double temp_x = 0;
           double temp_y = 0;
           double global_x;
           double global_y;
           for(int i = 1; i <= traj_pts_num - prev_size; ++i){
+            increment_dist = target_x / (target_dist/(0.02 * end_path_v));
             temp_x += increment_dist;
             temp_y = s(temp_x);
 
             global_x = temp_x*cos(anchor_theta) - temp_y*sin(anchor_theta);
             global_y = temp_x*sin(anchor_theta) + temp_y*cos(anchor_theta);
             global_x += anchor_x;
-            global_y += anchor_y;
+            global_y += anchor_y; 
 
             next_x_vals.push_back(global_x);
             next_y_vals.push_back(global_y);
           }
-          //std::cout << "trajectory size: " << next_x_vals.size() << std::endl;
+          // std::cout << "last x: " << next_x_vals[traj_pts_num-1] << " y: " << next_y_vals[traj_pts_num-1] << std::endl;
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
