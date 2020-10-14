@@ -112,15 +112,17 @@ int main() {
           // checking front cars in the same lane
           double safe_dist{0};
           double follow_dist{25};
+          double car_s_f{0};
           // vector<double> last = getXY(end_path_s, end_path_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
           // std::cout << "last x: " << last[0] << " y: " << last[1] << std::endl;
           if(prev_size > 0){
-            car_s = end_path_s;
+            car_s_f = end_path_s;
           }
           
           // find the closest car in front
           // TODO: improve the following temp variables to a better format
           double closest_car_s{100000};
+          double closest_car_s_f{10000};
           double closest_car_v{ref_v};
           
           for(int i = 0; i < sensor_fusion.size(); ++i){
@@ -130,10 +132,11 @@ int main() {
               double vy = sensor_fusion[i][4];
               double check_speed = sqrt(vx*vx + vy*vy);
               double check_car_s = sensor_fusion[i][5];
-              check_car_s += (double)prev_size*0.02*check_speed;
-              if(check_car_s > car_s && check_car_s < closest_car_s){
+              double check_car_s_f = check_car_s + (double)prev_size*0.02*check_speed;
+              if(check_car_s_f > car_s_f && check_car_s < closest_car_s){
                 //std::cout << "new front car s: " << check_car_s << " v: " << check_speed << std::endl;
                 closest_car_s = check_car_s;
+                closest_car_s_f = check_car_s_f;
                 closest_car_v = check_speed;
               }
             }
@@ -141,31 +144,28 @@ int main() {
 
           // set the following response
           // calculate safe distance
-          std::cout << "curr s: " << j[1]["s"] << " front s: " << closest_car_s << std::endl;
-          std::cout << " front s: " << closest_car_s << " car s: " << car_s <<  " front v: " << closest_car_v << " curr v: "<< end_path_v << std::endl;
-          if(closest_car_v < end_path_v){
-            safe_dist = follow_dist + pow((closest_car_v - end_path_v), 2)/(2 * acce_abs);
-            std::cout << " safe dist: " << safe_dist << std::endl;
-            if(closest_car_s - car_s <= safe_dist){
+          std::cout << "curr s: " << car_s << " front s: " << closest_car_s << std::endl;
+          std::cout << " front s pred: " << closest_car_s_f << " car s pred: " << car_s_f <<  " front v: " << closest_car_v << " curr v: "<< end_path_v << std::endl;
+          if(closest_car_v > end_path_v){
+            if(end_path_v < ref_v){
+              end_path_v += acce_abs * 0.02;
+            }
+          }
+          else{
+            double safe_dist_f = follow_dist + pow((closest_car_v - end_path_v), 2)/(2 * acce_abs);
+            std::cout << " safe dist: " << safe_dist_f << std::endl;
+            if(closest_car_s_f - car_s_f <= safe_dist_f){
               std::cout << "need to slow down\n";
-              ref_v = closest_car_v;
+              end_path_v -= acce_abs * 0.02;
             }
             else{
               std::cout << "safe at max speed\n";
-              ref_v = v_limit/2.24;
+              if(end_path_v < v_limit/2.24){
+                end_path_v += acce_abs * 0.02;
+              }
             }
           }
-          else{
-            std::cout << "safe at max speed\n";
-            ref_v = v_limit/2.24;
-          }
-          if(end_path_v > ref_v){
-            end_path_v -= acce_abs * 0.02;
-          }
-          else{
-            end_path_v += acce_abs * 0.02;
-          }
-          std::cout << "ref_v: " << ref_v << " end_path_v: " << end_path_v << std::endl; 
+          std::cout <<" end_path_v: " << end_path_v << std::endl; 
 
           // trajectory generation
           vector<double> ptsx;
