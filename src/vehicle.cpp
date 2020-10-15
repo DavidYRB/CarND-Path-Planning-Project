@@ -8,11 +8,3 @@ Vehicle::Vehicle(){
     yaw = 0.0;
     vel = 0.0;
 }
-
-void Vehicle::initMIOs(){
-    mios[MIOPoses::Front] = nullptr;
-    mios[MIOPoses::FrontLeft] = nullptr;
-    mios[MIOPoses::FrontRight] = nullptr;
-    mios[MIOPoses::RearLeft] = nullptr;
-    mios[MIOPoses::RearRight] = nullptr;
-}

@@ -17,12 +17,12 @@ class Vehicle{
     double y;
     double s;
     double d;
-    double yaw;
-    double vel;
     
         
   public:
     Vehicle();
+    Eigen::VectorXd getStatus();
+    void updateStatus(double sensor_x, double sensor_y, double sensor_s, double sensor_d, double sensor_yaw, double sensor_vel);
 };
 
 #endif

@@ -2,6 +2,9 @@
 
 class Ego : public Vehicle{
   private:
+    double yaw;
+    double vel;
+    
     // most important objects to ego, empty for other vehicles
     std::unordered_map<MIOPoses, std::shared_ptr<Vehicle>> mios;
     // best state before new trajectory being added
