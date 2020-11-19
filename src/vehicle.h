@@ -22,7 +22,7 @@ class Vehicle{
   public:
     Vehicle();
     Eigen::VectorXd getStatus();
-    void updateStatus(double sensor_x, double sensor_y, double sensor_s, double sensor_d, double sensor_yaw, double sensor_vel);
+    virtual void updateStatus(double sensor_x, double sensor_y, double sensor_s, double sensor_d, double sensor_yaw, double sensor_vel);
 };
 
 #endif

@@ -1,26 +1,36 @@
 #include "vehicle.h"
 
+#include <memory>
+#include <unordered_map>
 class Ego : public Vehicle{
   private:
     double yaw;
     double vel;
-    
-    // most important objects to ego, empty for other vehicles
-    std::unordered_map<MIOPoses, std::shared_ptr<Vehicle>> mios;
-    // best state before new trajectory being added
-    States next_best_state;
-    // best trajectory coeffecients for ego
-    Eigen::Matrix<double, 2, 6> best_traj_coeff;
-    // Planner objects for current vehicle
-    Planner path_planner;
 
-    void initMIOs();
+    State current_state;
+    std::vector<double> prev_traj_s;
+    std::vector<double> prev_traj_d;
+    std::vector<double> curr_traj_s;
+    std::vector<double> curr_traj_d;
+    double cost;
+    double horizon_ref;
+
+    Eigen::Vector3d s_init;
+    Eigen::Vector3d d_init;
+
+    Eigen::Matrix3d s_traj;
+    Eigen::Matrix3d d_traj;
+    std::vector<double> state_traj;
+
+
+    // most important objects to ego, empty for other vehicles
+    std::unordered_map<int, std::shared_ptr<Vehicle>> detected_cars;
+
+    bool init_finished;
 
   public:
-    void resetPlanner();
-    void resetMIOS();
-    void updateVehicleStatus(double car_x, double car_y, double car_s, double car_d, double car_yaw, double car_speed);
-    void updateMIOS(std::vector<std::vector<double>>& sensor_fusion);
-    std::vector<States> getAvailableStates();
-    void getBestTrajectory(std::vector<States>& available_states);
+    void init();
+    bool isInitialized();
+    void updateEgoStatus(double car_x, double car_y, double car_s, double car_d, double car_yaw, double car_speed);
+    void updateTrajectory(int used_points, const std::vector<double>& s_traj_coeff, const std::vector<double>& d_traj_coeff, std::vector<double>& next_x_vel, std::vector<double>& next_y_vel){}
 }
