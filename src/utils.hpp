@@ -4,6 +4,13 @@
 #define MAX_COST 99999
 #define TIME_INTERVAL 0.1
 #define TRAJECTORY_TIME_INTERVAL 0.02
+#define TRAJECTORY_LENGTH 50
+#define TRAJECTORY_KEEP_MAX 25
+#define COEFFNUMBER 6
+#define HORIZONREF 5 // 5 seconds
+#define MPSTOMPH 22.4
+#define SENSORRANGE 50
+
 #include <cfloat>
 #include <Eigen/Dense>
 #include <math.h>
