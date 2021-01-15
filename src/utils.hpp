@@ -50,7 +50,41 @@ double getCartesionVel(double x_vel, double y_vel){
 // TODO: Backbone functions
 std::vector<double> getTrajCoeff(Eigen::Vector3d init_cond, Eigen::Vector3d final_cond, double horizon_t){}
 
-std::vector<State> getAvailableStates(State curr_state, int curr_d){}
+std::vector<State> getAvailableStates(State curr_state, int curr_d){
+    int lane_num = getLaneNumber(curr_d);
+    std::vector<State> nextStates;
+    if(curr_state == State::KeepLane){
+        nextStates.push_back(State::KeepLane);
+        if(lane_num == 0){
+            nextStates.push_back(State::PreLaneChangeRight);
+        }
+        else if(lane_num == 1){
+            nextStates.push_back(State::PreLaneChangeLeft);
+            nextStates.push_back(State::PreLaneChangeRight);
+        }
+        else{
+            nextStates.push_back(State::PreLaneChangeLeft);
+        }
+    }
+    else if(curr_state == State::PreLaneChangeLeft){
+        nextStates.resize(3);
+        nextStates[0] = State::PreLaneChangeLeft;
+        nextStates[1] = State::KeepLane;
+        nextStates[2] = State::LaneChangeLeft;
+    }
+    else if(curr_state == State::PreLaneChangeRight){
+        nextStates.resize(3);
+        nextStates[0] = State::PreLaneChangeRight;
+        nextStates[1] = State::KeepLane;
+        nextStates[2] = State::LaneChangeRight;
+    }
+    else{
+        nextStates.resize(2);
+        nextStates[0] = curr_state;
+        nextStates[1] = State::KeepLane;
+    }
+    return nextStates;
+}
 
 std::vector<std::vector<double>> generateFinalContidionsKL(Eigen::Vector3d s_init, Eigen::Vector3d d_init, double horizon_t){}
 std::vector<std::vector<double>> generateFinalContidionsPLC(Eigen::Vector3d s_init, Eigen::Vector3d d_init, double horizon_t){}

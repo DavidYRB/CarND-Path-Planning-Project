@@ -29,6 +29,7 @@ class Ego : public Vehicle{
 
     Eigen::Vector3d s_init;
     Eigen::Vector3d d_init;
+    State state_init;
 
     Eigen::Matrix3d s_traj;
     Eigen::Matrix3d d_traj;
